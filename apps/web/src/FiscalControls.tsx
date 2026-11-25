@@ -23,7 +23,11 @@ export function FiscalControls({ profile, language, onChange }: { profile: TaxPr
       </select></label>
       {profile.regime === 'cedolare10' && check('reducedRateEligible')}
       {profile.regime === 'custom' && numeric('customTaxPercent', 100)}
-      {profile.regime === 'ordinary' && <>{numeric('otherTaxableIncome', 1e12, 'otherIncomeHelp')}{numeric('localSurtaxPercent', 20)}{check('ordinaryConcordatoReduction')}{numeric('annualLeaseDuties')}</>}
+      {profile.regime === 'ordinary' && <>{numeric('otherTaxableIncome', 1e12, 'otherIncomeHelp')}{numeric('localSurtaxPercent', 20)}{check('ordinaryConcordatoReduction')}
+        <label className="field"><span>{t('leaseDutiesMode')}</span><select name="tax.leaseDutiesMode" value={profile.leaseDutiesMode} onChange={e => update('leaseDutiesMode', e.target.value)}>
+          <option value="auto">{t('leaseDutiesAuto')}</option><option value="manual">{t('leaseDutiesManual')}</option>
+        </select>{profile.leaseDutiesMode === 'auto' && <small>{t('leaseDutiesAutoHelp')}</small>}</label>
+        {profile.leaseDutiesMode === 'manual' && numeric('annualLeaseDuties')}</>}
       {numeric('cadastralRent')}{numeric('imuRatePermille', 30, 'imuHelp')}{check('imuConcordatoReduction')}
       <label className="field"><span>{t('purchaseTaxMode')}</span><select name="tax.purchaseTaxMode" value={profile.purchaseTaxMode} onChange={e => update('purchaseTaxMode', e.target.value)}>
         <option value="manual">{t('manual')}</option><option value="second_home_private">{t('second_home_private')}</option>

@@ -1,6 +1,6 @@
-# Profili fiscali Italia e Germania — versione 0.2.0
+# Profili fiscali Italia e Germania — versione 0.2.1
 
-Regole di riferimento: 2026. Verifica delle fonti: 30 ottobre 2026. Modello di calcolo: `3.0.0`.
+Regole di riferimento: 2026. Verifica delle fonti: 30 ottobre 2026. Modello di calcolo: `3.1.0`.
 
 Il perimetro concordato con l'utente è quello delle persone fisiche residenti nel Paese in cui si trova l'immobile. Le sezioni Italia e Germania coprono immobili residenziali locati a lungo termine, per anni interi e intera proprietà. La sezione Generale resta disponibile per i calcoli precedenti.
 
@@ -8,13 +8,16 @@ La fiscalità usa la residenza e l'ubicazione, non la cittadinanza. Investimenti
 
 ## Italia
 
-- Cedolare 21% e 10%. Il 10% richiede conferma esplicita dei requisiti del contratto e dell'ubicazione. I canoni rimangono fissi durante l'opzione, anche se nei parametri generali è stato selezionato un adeguamento.
-- Ordinario: base pari al maggiore fra rendita catastale rivalutata attribuita al periodo locato e 95% dei canoni simulati. L'ulteriore riduzione del 30% è un'opzione separata che richiede requisiti verificati dall'utente.
+- Cedolare 21% e 10%. Il 10% richiede conferma esplicita dei requisiti del contratto e dell'ubicazione. Durante l'opzione il locatore rinuncia all'aggiornamento ISTAT: l'adeguamento all'inflazione non viene applicato e i ricavi accessori restano fissi. L'adeguamento al valore dell'immobile viene invece applicato ogni N anni come nuovo contratto al rinnovo: impostare N sulla durata effettiva (es. 8 anni per 4+4, 5 per 3+2).
+- Ordinario: base pari al maggiore fra rendita catastale rivalutata attribuita al periodo locato e 95% dei canoni simulati. L'ulteriore riduzione del 30% è un'opzione separata che richiede requisiti verificati dall'utente (canone concordato in comune ad alta tensione abitativa); la stessa opzione porta al 70% la base del registro.
 - IRPEF lorda 2026 per scaglioni: 23% fino a 28.000 EUR, 33% fra 28.000 e 50.000 EUR, 43% oltre. Per stimare l'effetto dell'investimento si sottrae l'imposta sull'altro imponibile dall'imposta sull'imponibile comprensivo della locazione. Non si applica l'aliquota più alta all'intero reddito.
 - Addizionali: aliquota incrementale stimata inserita dall'utente; non è una riproduzione delle soglie e delle aliquote di tutti i Comuni e le Regioni.
 - IMU abitazioni: rendita × 1,05 × 160 × aliquota comunale in per mille / 1000. Non usa il valore di mercato rivalutato. La riduzione al 75% per canone concordato è indipendente dalla scelta della cedolare e richiede un'apposita selezione.
-- Registro/bollo sulla locazione ordinaria: importo annuo effettivamente a carico dell'investitore inserito manualmente, nullo nei profili cedolare. Non si calcolano autonomamente rinnovi, acconti e giorni.
+- Registro sulla locazione ordinaria: di default è calcolata la quota del locatore (50%) del 2% del canone annuo, inclusi i ricavi accessori, con base al 70% per il canone concordato e minimo di 67 EUR sulla prima annualità; segue quindi gli adeguamenti del canone. In alternativa si può inserire un importo annuo manuale. Il bollo è escluso, così come rinnovi, proroghe e pagamento anticipato per l'intera durata. Nullo nei profili cedolare. Gli scenari salvati con il modello 3.0.0 restano in modalità manuale.
 - Acquisto: importo manuale da rogito, oppure prezzo-valore per seconda casa residenziale da privato, senza IVA e senza agevolazione prima casa. L'automatismo richiede conferma dei requisiti: 9% di rendita × 1,05 × 120, minimo 1.000 EUR, più 50 EUR ipotecaria e 50 EUR catastale. Notaio, agenzia e altri costi non già inseriti restano voci distinte.
+
+- Vendita entro 5 anni dall'acquisto: viene mostrata una stima dell'imposta sostitutiva del 26% sulla plusvalenza (valore finale meno commissione finale, al netto di prezzo d'acquisto, ristrutturazione, commissione iniziale, imposte e costi d'acquisto), con un avviso se non è stata inserita un'imposta di vendita. La stima non entra nei risultati: va riportata manualmente se dovuta. Non considera l'esenzione per abitazione principale né il termine di 10 anni per gli immobili con lavori Superbonus.
+- Avvisi: rendita catastale nulla, imposte d'acquisto manuali pari a zero, aliquota IMU oltre l'11,4‰ o addizionali oltre il 4,5% in regime ordinario.
 
 Non vengono dedotte dall'imponibile fondiario le spese operative effettive o gli interessi del mutuo. Cedolare e aliquota personalizzata usano il canone pieno, con il confronto con la rendita rivalutata nel perimetro dichiarato. I ricavi personalizzati italiani devono rappresentare canoni accessori dello stesso regime; anche questi concorrono all'abbattimento ordinario del 5% e restano fissi in cedolare.
 
@@ -65,8 +68,8 @@ Il ROI senza leva rimuove le rate e, nel caso tedesco, anche il beneficio fiscal
 
 ## Dati, compatibilità e prove
 
-Formato archivio `schemaVersion: 2`, con profilo fiscale per scenario e bozze per Generale/Italia/Germania. La versione 0.2.0 legge e migra automaticamente gli archivi versione 1, mantenendo gli scenari generici. La vecchia app non è compatibile con un archivio versione 2: non alternare le versioni sullo stesso archivio.
+Formato archivio `schemaVersion: 2`, con profilo fiscale per scenario e bozze per Generale/Italia/Germania. La versione 0.2.1 legge e migra automaticamente gli archivi versione 1, mantenendo gli scenari generici. La vecchia app non è compatibile con un archivio versione 2: non alternare le versioni sullo stesso archivio.
 
 Import/export conserva i profili e tutte le bozze. Una bozza importata distinta dagli scenari viene aggiunta come nuovo scenario; gli ID esistenti non sono sovrascritti. Le fonti sono consultabili nella UI; non è richiesto accesso internet per eseguire i calcoli.
 
-La suite passa 67 test: parità generica con Python, esempi indipendenti di IRPEF/ESt/Soli, acquisto e IMU, AfA residua, interessi, perdite, flussi di cassa, migrazione/import, errori di validazione dell'archivio e separazione delle sezioni nella UI. L'altro reddito imponibile resta costante nella proiezione. Non è una certificazione della dichiarazione fiscale: usare le stime come simulazioni e verificare i dati effettivi con il proprio consulente.
+La suite passa 74 test: parità generica con Python, esempi indipendenti di IRPEF/ESt/Soli, acquisto e IMU, cedolare con rinnovo del canone, registro automatico, stima della plusvalenza e avvisi italiani, AfA residua, interessi, perdite, flussi di cassa, migrazione/import, errori di validazione dell'archivio e separazione delle sezioni nella UI. L'altro reddito imponibile resta costante nella proiezione. Non è una certificazione della dichiarazione fiscale: usare le stime come simulazioni e verificare i dati effettivi con il proprio consulente.

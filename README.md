@@ -2,13 +2,13 @@
 
 Calcolatore di investimenti immobiliari offline, convertito da Python/Streamlit a Node.js e TypeScript. Interfaccia React condivisa, Electron per Windows/Linux e Capacitor per Android.
 
-Sono implementati i 19 parametri originali, simulazione annuale, rivalutazione, inflazione, costi, mutuo, commissioni, CAGR, TIR, ROI e ROE, italiano/inglese, salvataggio automatico della bozza, scenari con nome, backup e import/export JSON. La versione desktop è `0.2.1`, con modello `3.0.0`; l'ultima build Android è `0.2.0`.
+Sono implementati i 19 parametri originali, simulazione annuale, rivalutazione, inflazione, costi, mutuo, commissioni, CAGR, TIR, ROI e ROE, italiano/inglese, salvataggio automatico della bozza, scenari con nome, backup e import/export JSON. La versione desktop è `0.2.1`, con modello `3.1.0`; l'ultima build Android è `0.2.0`.
 
 ## Italia e Germania
 
 Tre sezioni indipendenti: **Generale**, **Italia**, **Germania**. I profili nazionali coprono privati residenti nel Paese dell'immobile e locazioni residenziali a lungo termine; bozze e scenari restano separati.
 
-- Italia: cedolare 21%/10% con conferma dei requisiti, IRPEF incrementale 2026, addizionali stimate, IMU catastale, riduzioni per canone concordato e acquisto seconda casa da privato oppure imposte manuali.
+- Italia: cedolare 21%/10% con conferma dei requisiti (senza ISTAT, canone riallineato al rinnovo), IRPEF incrementale 2026, addizionali stimate, IMU catastale, registro automatico in regime ordinario, riduzioni per canone concordato, acquisto seconda casa da privato oppure imposte manuali, stima della plusvalenza per vendite entro 5 anni.
 - Germania: Einkommensteuer 2026 e splitting, costi/interessi deducibili, AfA residua, Soli, Kirchensteuer, Grundsteuer da avviso e Grunderwerbsteuer con aliquota del Land inserita.
 - Entrambe: costi e ricavi annui personalizzati, indicizzazione, costi iniziali extra e imposte di vendita manuali; dettaglio di imponibile, deduzioni e imposte annuali.
 
@@ -50,6 +50,8 @@ npm run build
 npm run desktop:smoke
 npm run desktop:dist
 ```
+
+Su Windows eseguire i test da un percorso con la lettera di unità maiuscola (`D:\...`): se la cartella corrente è `d:\...`, come può accadere nel terminale di VS Code, vitest carica due copie di sé stesso e fallisce con «Vitest failed to find the runner».
 
 `npm test` include confronti con 15 scenari Python, prove analitiche del TIR, validazione, persistenza, recupero da backup e flussi dell'interfaccia. `npm run test:ui` esegue solo i test UI. Lo smoke desktop verifica il caricamento reale del renderer e una scrittura tramite IPC in una directory temporanea, senza usare l'archivio personale.
 

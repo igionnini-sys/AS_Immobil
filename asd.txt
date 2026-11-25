@@ -1,0 +1,37 @@
+Immobiliare - descrizione dell'app
+
+Immobiliare e' un calcolatore di investimenti immobiliari offline. Funziona come applicazione desktop per Windows/Linux (Electron), come app Android (Capacitor) e come anteprima nel browser. L'interfaccia e' condivisa tra le piattaforme ed e' disponibile in italiano e inglese.
+
+Funzionalita principali
+- 19 parametri di investimento originali.
+- Simulazione annuale con rivalutazione, inflazione, costi, mutuo e commissioni.
+- Indicatori di rendimento: CAGR, TIR, ROI e ROE (con mutuo il ROE e' una stima).
+- Profili fiscali separati per Italia e Germania (cedolare secca, IRPEF, IMU, Einkommensteuer, Grundsteuer, Grunderwerbsteuer e altro), con dettaglio di imponibile, deduzioni e imposte annuali.
+- Salvataggio automatico della bozza e scenari con nome (salva, aggiorna, nuovo scenario).
+- Backup e import/export in formato JSON (schemaVersion 2, massimo 5 MiB e 1000 scenari). Gli scenari importati non sovrascrivono quelli esistenti.
+
+Dati
+- Desktop: file locali nella cartella userData di Electron.
+- Android: area privata dell'app (la disinstallazione puo' cancellarla).
+- Browser: IndexedDB, separato dai dati desktop e Android.
+
+Avvio
+- Windows: avvia.bat (doppio clic).
+- Linux: ./avvia.sh (dopo chmod +x).
+- Sviluppo: npm ci, poi npm run dev (http://127.0.0.1:5173) oppure npm run desktop:dev.
+- Requisito: Node.js 24 LTS (>= 24.15.0).
+
+Build e verifica
+- npm run lint, npm run typecheck, npm test, npm run build.
+- npm run desktop:dist (installer Windows/AppImage Linux), npm run android:debug (APK di debug).
+
+Struttura del progetto
+- apps/web: interfaccia React/Vite.
+- apps/desktop: shell Electron.
+- apps/mobile: progetto Capacitor/Android.
+- packages/core, packages/i18n, packages/storage: logica di calcolo, traduzioni e persistenza.
+- docs/: documentazione fiscale e di migrazione.
+- Sorgenti Python originali (REIT.py, calcoli.py, ui.py, ecc.) conservati come riferimento.
+
+Avvertenza
+L'app e' una simulazione educativa e non costituisce consulenza finanziaria o fiscale. Le stime fiscali non coprono tutte le variabili di una dichiarazione.

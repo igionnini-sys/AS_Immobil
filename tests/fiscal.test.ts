@@ -14,7 +14,8 @@ describe('Italia: regole 2026 per persona fisica residente', () => {
     expect(annualFiscal(parseTaxProfile(p), annual)).toMatchObject({ incomeTax: 1200, propertyTax: 1260 });
   });
   it('usa IRPEF incrementale e 95% del canone, senza dedurre le spese effettive', () => {
-    const p = { ...defaultTaxProfile('italy'), regime: 'ordinary' as const, otherTaxableIncome: 25000, localSurtaxPercent: 2, annualLeaseDuties: 100 };
+    const p = { ...defaultTaxProfile('italy'), regime: 'ordinary' as const, otherTaxableIncome: 25000, localSurtaxPercent: 2,
+      leaseDutiesMode: 'manual' as const, annualLeaseDuties: 100 };
     const r = annualFiscal(p, annual);
     expect(r.taxableRentalIncome).toBe(11400);
     expect(r.incomeTax).toBeCloseTo(3000 * .23 + 8400 * .33, 8);
@@ -28,14 +29,77 @@ describe('Italia: regole 2026 per persona fisica residente', () => {
     expect(() => parseTaxProfile({ ...p, priceValueEligible: false })).toThrow();
     expect(() => parseTaxProfile({ ...p, regime: 'cedolare10' })).toThrow();
   });
-  it('blocca adeguamenti in cedolare e tassa i canoni accessori nello stesso regime', () => {
+  it('in cedolare blocca l’ISTAT, mantiene fissi i canoni accessori e li tassa nello stesso regime', () => {
     const p = defaultTaxProfile('italy');
     p.customFlows = [{ id: 'accessory', label: 'Pertinenza', kind: 'income', annualAmount: 1200, inflationLinked: true, deductible: false }];
-    const r = calculateInvestment({ ...DEFAULT_PARAMS, taxProfile: p });
+    const r = calculateInvestment({ ...DEFAULT_PARAMS, tipo_adeguamento: 'inflation', taxProfile: p });
     expect(r.affitti_lordi_annuali).toEqual(Array(10).fill(12000));
+    expect(r.warnings).toContain('cedolare_fixed_rent');
     expect(r.fiscal!.years[1].customIncome).toBe(1200);
     const ordinary = annualFiscal({ ...p, regime: 'ordinary' }, annual);
     expect(ordinary.taxableRentalIncome).toBe(13200 * .95);
+  });
+  it('in cedolare riallinea il canone al valore dell’immobile al rinnovo del contratto', () => {
+    const r = calculateInvestment({ ...DEFAULT_PARAMS, tipo_adeguamento: 'property_value', taxProfile: defaultTaxProfile('italy') });
+    expect(r.affitti_lordi_annuali).toEqual(calculateInvestment(DEFAULT_PARAMS).affitti_lordi_annuali);
+    expect(r.affitti_lordi_annuali[2]).toBe(12000);
+    expect(r.affitti_lordi_annuali[3]).toBeGreaterThan(12000);
+    expect(r.warnings).toContain('cedolare_renewal_rent');
+    expect(r.warnings).not.toContain('cedolare_fixed_rent');
+  });
+  it('su 20 anni la cedolare 21% resta più conveniente dell’IRPEF al 33% con gli stessi canoni', () => {
+    const params = { ...DEFAULT_PARAMS, anni_investimento: 20, periodo_sfitto_perc: 0, adeguamento_affitto_anni: 8 };
+    const cedolare = calculateInvestment({ ...params, taxProfile: defaultTaxProfile('italy') });
+    const ordinary = calculateInvestment({ ...params, taxProfile: { ...defaultTaxProfile('italy'), regime: 'ordinary', otherTaxableIncome: 30000 } });
+    expect(cedolare.affitti_lordi_annuali).toEqual(ordinary.affitti_lordi_annuali);
+    expect(cedolare.rendimento_totale_nominale).toBeGreaterThan(ordinary.rendimento_totale_nominale);
+  });
+  it('calcola la quota locatore del registro, con minimo e riduzione per canone concordato', () => {
+    const p = { ...defaultTaxProfile('italy'), regime: 'ordinary' as const };
+    expect(p.leaseDutiesMode).toBe('auto');
+    expect(annualFiscal(p, annual).leaseDuties).toBeCloseTo(120, 8);
+    expect(annualFiscal({ ...p, ordinaryConcordatoReduction: true }, annual).leaseDuties).toBeCloseTo(84, 8);
+    const small = { ...annual, rentReceived: 2000 };
+    expect(annualFiscal(p, small).leaseDuties).toBeCloseTo(33.5, 8);
+    expect(annualFiscal(p, { ...small, year: 2 }).leaseDuties).toBeCloseTo(20, 8);
+    expect(annualFiscal(p, { ...annual, rentReceived: 0 }).leaseDuties).toBe(0);
+    expect(annualFiscal(defaultTaxProfile('italy'), annual).leaseDuties).toBe(0);
+    const growing = calculateInvestment({ ...DEFAULT_PARAMS, periodo_sfitto_perc: 0, tipo_adeguamento: 'inflation', taxProfile: p });
+    expect(growing.fiscal!.years[9].leaseDuties).toBeCloseTo(growing.fiscal!.years[9].rentReceived * 0.01, 8);
+  });
+  it('profili salvati prima del registro automatico restano in modalità manuale', () => {
+    const legacy: Record<string, unknown> = { ...defaultTaxProfile('italy'), regime: 'ordinary', annualLeaseDuties: 150 };
+    delete legacy.leaseDutiesMode;
+    const parsed = parseTaxProfile(legacy);
+    expect(parsed).toMatchObject({ leaseDutiesMode: 'manual', annualLeaseDuties: 150 });
+    expect(annualFiscal(parsed, annual).leaseDuties).toBe(150);
+    expect(() => parseTaxProfile({ ...legacy, leaseDutiesMode: 'other' })).toThrow();
+  });
+  it('stima la plusvalenza al 26% se la vendita avviene entro 5 anni, senza includerla nei risultati', () => {
+    const p = { ...defaultTaxProfile('italy'), manualPurchaseTax: 5000 };
+    const params = { ...DEFAULT_PARAMS, anni_investimento: 3, costo_acquisto: 150000 };
+    const r = calculateInvestment({ ...params, taxProfile: p });
+    expect(r.fiscal!.capitalGainTaxEstimate).toBeCloseTo((200000 * 1.02 ** 3 - 155000) * 0.26, 6);
+    expect(r.warnings).toContain('italy_capital_gain');
+    expect(r.fiscal!.exitTax).toBe(0);
+    expect(r.cash_flows_nominal[3]).toBeCloseTo(r.affitti_netti_annuali[2] + r.valore_finale_nominale, 6);
+    expect(calculateInvestment({ ...params, taxProfile: { ...p, exitTaxAmount: 16000 } }).warnings).not.toContain('italy_capital_gain');
+    const fiveYears = calculateInvestment({ ...params, anni_investimento: 5, taxProfile: p });
+    expect(fiveYears.fiscal!.capitalGainTaxEstimate).toBeNull();
+    expect(fiveYears.warnings).not.toContain('italy_capital_gain');
+    expect(calculateInvestment({ ...params, taxProfile: defaultTaxProfile('germany') }).fiscal!.capitalGainTaxEstimate).toBeNull();
+  });
+  it('segnala rendita mancante, imposte di acquisto nulle e aliquote fuori dai massimi abituali', () => {
+    const base = { ...defaultTaxProfile('italy'), manualPurchaseTax: 5000 };
+    const warnings = (p: object) => calculateInvestment({ ...DEFAULT_PARAMS, taxProfile: { ...base, ...p } }).warnings;
+    expect(warnings({})).not.toContain('italy_cadastral_missing');
+    expect(warnings({})).not.toContain('italy_purchase_tax_zero');
+    expect(warnings({})).not.toContain('italy_rate_unusual');
+    expect(warnings({ cadastralRent: 0 })).toContain('italy_cadastral_missing');
+    expect(warnings({ manualPurchaseTax: 0 })).toContain('italy_purchase_tax_zero');
+    expect(warnings({ imuRatePermille: 15 })).toContain('italy_rate_unusual');
+    expect(warnings({ regime: 'ordinary', localSurtaxPercent: 8 })).toContain('italy_rate_unusual');
+    expect(warnings({ localSurtaxPercent: 8 })).not.toContain('italy_rate_unusual');
   });
   it('sfitto completo non genera canoni imponibili nel perimetro dichiarato', () => {
     const r = calculateInvestment({ ...DEFAULT_PARAMS, periodo_sfitto_perc: 100, taxProfile: defaultTaxProfile('italy') });

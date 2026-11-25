@@ -41,6 +41,7 @@ describe('Flussi UI', () => {
     expect((income as HTMLInputElement).value).toBe('60000');
     await user.click(screen.getByRole('button', { name: 'Calcola investimento' }));
     expect(screen.getByText(/Il carico fiscale del tuo scenario/)).toBeTruthy();
+    expect(screen.queryByText(/Calcolo semplificato basato sul valore/)).toBeNull();
     await user.click(screen.getByRole('button', { name: /Esporta archivio/ }));
     const archive = parseArchive(mocks.exportFile.mock.calls[0][0]);
     expect(archive.sectionDrafts.italy!.inputs.taxProfile?.country).toBe('italy');
@@ -66,6 +67,7 @@ describe('Flussi UI', () => {
     await screen.findByRole('button', { name: 'Calcola investimento' });
     await user.click(screen.getByRole('button', { name: 'Calcola investimento' }));
     expect(screen.getByTestId('total-profit').textContent).toContain('€');
+    expect(screen.getByText(/Calcolo semplificato basato sul valore/)).toBeTruthy();
     const rent = screen.getByRole('spinbutton', { name: /Affitto Lordo Mensile/ });
     fireEvent.change(rent, { target: { value: '1500' } });
     expect(screen.getByText(/Hai modificato i parametri/)).toBeTruthy();

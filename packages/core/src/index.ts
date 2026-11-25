@@ -1,6 +1,10 @@
 import { acquisitionTax, annualFiscal, fiscalIssues, parseTaxProfile, type FiscalYear, type TaxProfile } from './fiscal';
 export * from './fiscal';
-export const MODEL_VERSION = '3.0.0';
+export const MODEL_VERSION = '3.1.0';
+/** Plusvalenza immobiliare tassabile se la vendita avviene entro 5 anni (art. 67 TUIR). */
+const ITALY_CAPITAL_GAIN_YEARS = 5, ITALY_CAPITAL_GAIN_RATE = 0.26;
+/** Soglie oltre le quali un'aliquota italiana è probabilmente un errore di inserimento. */
+const ITALY_MAX_IMU_PERMILLE = 11.4, ITALY_MAX_SURTAX_PERCENT = 4.5;
 export type Adjustment = 'property_value' | 'inflation' | 'none';
 
 export interface InvestmentParams {
@@ -129,12 +133,14 @@ export function calculateInvestment(input: InvestmentParams) {
   const valori_annuali: number[] = [], affitti_lordi_annuali: number[] = [], affitti_netti_annuali: number[] = [];
   const rendimenti_annuali: number[] = [], costi_gestione_annuali: number[] = [], costi_mutuo_annuali: number[] = [];
   const fiscalYears: FiscalYear[] = [], mortgageTaxBenefits: number[] = [];
-  const fixedRent = profile?.country === 'italy' && (profile.regime === 'cedolare21' || profile.regime === 'cedolare10');
+  // Con la cedolare il locatore rinuncia all'aggiornamento ISTAT per la durata dell'opzione;
+  // al rinnovo (nuovo contratto) il canone può essere riallineato al mercato.
+  const cedolare = profile?.country === 'italy' && (profile.regime === 'cedolare21' || profile.regime === 'cedolare10');
   for (let year = 1; year <= p.anni_investimento; year++) {
     property *= growth; management *= inflation; insurance *= inflation;
-    if (!fixedRent && year % p.adeguamento_affitto_anni === 0) {
+    if (year % p.adeguamento_affitto_anni === 0) {
       if (p.tipo_adeguamento === 'property_value') rent = property * (p.affitto_lordo / p.valore_immobile);
-      if (p.tipo_adeguamento === 'inflation') rent *= inflation ** p.adeguamento_affitto_anni;
+      if (p.tipo_adeguamento === 'inflation' && !cedolare) rent *= inflation ** p.adeguamento_affitto_anni;
     }
     const mortgage = year <= p.anni_restanti_mutuo ? p.rata_mutuo_mensile * 12 : 0;
     const effective = rent * (1 - p.periodo_sfitto_perc / 100);
@@ -178,8 +184,22 @@ export function calculateInvestment(input: InvestmentParams) {
   if (p.rata_mutuo_mensile > 0) warnings.push('roe_estimated');
   if (p.rata_mutuo_mensile > 0 && p.anni_restanti_mutuo === 0) warnings.push('mortgage_zero_years');
   if (p.costo_acquisto === 0 && p.costo_ristrutturazione > 0) warnings.push('renovation_only');
-  if (fixedRent && p.tipo_adeguamento !== 'none') warnings.push('cedolare_fixed_rent');
+  if (cedolare && p.tipo_adeguamento === 'inflation') warnings.push('cedolare_fixed_rent');
+  if (cedolare && p.tipo_adeguamento === 'property_value') warnings.push('cedolare_renewal_rent');
   if (profile) warnings.push('fiscal_projection', 'sale_tax_manual');
+  let capitalGainTaxEstimate: number | null = null;
+  if (profile?.country === 'italy') {
+    if (p.anni_investimento < ITALY_CAPITAL_GAIN_YEARS) {
+      // Costo fiscale: prezzo, lavori, oneri accessori e imposte d'acquisto; prezzo di vendita al netto della commissione.
+      const basis = (p.costo_acquisto || p.valore_immobile) + p.costo_ristrutturazione + p.commissione_iniziale + acquisitionExtras;
+      capitalGainTaxEstimate = Math.max(0, finalNominal - p.commissione_finale - basis) * ITALY_CAPITAL_GAIN_RATE;
+      if (capitalGainTaxEstimate > 0 && exitTax === 0) warnings.push('italy_capital_gain');
+    }
+    if (profile.cadastralRent <= 0) warnings.push('italy_cadastral_missing');
+    if (profile.purchaseTaxMode === 'manual' && profile.manualPurchaseTax === 0) warnings.push('italy_purchase_tax_zero');
+    if (profile.imuRatePermille > ITALY_MAX_IMU_PERMILLE
+      || (profile.regime === 'ordinary' && profile.localSurtaxPercent > ITALY_MAX_SURTAX_PERCENT)) warnings.push('italy_rate_unusual');
+  }
   if (profile?.country === 'germany') warnings.push('german_estimate');
   if (fiscalYears.some(row => row.operatingDeductionRequested > row.operatingDeduction + 1e-6)) warnings.push('deduction_capped');
   if (irrNominal.status === 'ambiguous' || irrReal.status === 'ambiguous') warnings.push('irr_ambiguous');
@@ -189,7 +209,7 @@ export function calculateInvestment(input: InvestmentParams) {
   return {
     modelVersion: MODEL_VERSION, warnings,
     fiscal: profile ? { country: profile.country, rulesYear: profile.rulesYear, purchaseTax,
-      additionalAcquisitionCosts: profile.additionalAcquisitionCosts, exitTax, years: fiscalYears,
+      additionalAcquisitionCosts: profile.additionalAcquisitionCosts, exitTax, capitalGainTaxEstimate, years: fiscalYears,
       totalIncomeTax: sum(fiscalYears.map(y => y.incomeTax + y.surtax + y.solidarity + y.churchTax)),
       totalPropertyTax: sum(fiscalYears.map(y => y.propertyTax)),
       totalLeaseDuties: sum(fiscalYears.map(y => y.leaseDuties)),

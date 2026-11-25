@@ -24,6 +24,8 @@ export interface ItalyProfile extends CommonProfile {
   imuRatePermille: number;
   imuConcordatoReduction: boolean;
   ordinaryConcordatoReduction: boolean;
+  /** 'auto': quota locatore del registro calcolata sul canone; 'manual': annualLeaseDuties. */
+  leaseDutiesMode: 'auto' | 'manual';
   annualLeaseDuties: number;
   purchaseTaxMode: 'manual' | 'second_home_private';
   priceValueEligible: boolean;
@@ -54,7 +56,7 @@ export function defaultTaxProfile(country: Exclude<Section, 'generic'>): TaxProf
   return country === 'italy' ? { ...common, country, regime: 'cedolare21', reducedRateEligible: false,
     customTaxPercent: 21, otherTaxableIncome: 30000, localSurtaxPercent: 2,
     cadastralRent: 800, imuRatePermille: 10.6, imuConcordatoReduction: false,
-    ordinaryConcordatoReduction: false, annualLeaseDuties: 0,
+    ordinaryConcordatoReduction: false, leaseDutiesMode: 'auto', annualLeaseDuties: 0,
     purchaseTaxMode: 'manual', priceValueEligible: false, manualPurchaseTax: 0 }
     : { ...common, country, otherTaxableIncome: 40000, jointAssessment: false, churchTaxPercent: 0,
       applySoli: true, allowLossOffset: false, deductibleOperatingAnnual: 0, deductibleInterestAnnual: 0,
@@ -88,6 +90,8 @@ export const fiscalIssues = (value: unknown): FiscalIssue[] => {
   if (p.country === 'italy') {
     choice('regime', ['cedolare21', 'cedolare10', 'ordinary', 'custom']);
     choice('purchaseTaxMode', ['manual', 'second_home_private']);
+    // Assente negli archivi creati prima del modello 3.1.0: vedi LEGACY_DEFAULTS.
+    if (p.leaseDutiesMode !== undefined) choice('leaseDutiesMode', ['auto', 'manual']);
     for (const f of ['reducedRateEligible', 'imuConcordatoReduction', 'ordinaryConcordatoReduction', 'priceValueEligible']) bool(f);
     for (const f of ['otherTaxableIncome', 'cadastralRent', 'annualLeaseDuties', 'manualPurchaseTax']) number(f);
     number('customTaxPercent', 0, 100); number('localSurtaxPercent', 0, 20); number('imuRatePermille', 0, 30);
@@ -102,19 +106,31 @@ export const fiscalIssues = (value: unknown): FiscalIssue[] => {
   }
   return issues;
 };
+/** Valori per campi introdotti dopo la creazione dell'archivio: conservano il comportamento precedente. */
+const LEGACY_DEFAULTS: Record<string, unknown> = { leaseDutiesMode: 'manual' };
 export function parseTaxProfile(value: unknown): TaxProfile {
   const issues = fiscalIssues(value);
   if (issues.length) throw new Error(`INVALID_TAX_PROFILE:${issues.map(i => i.field).join(',')}`);
   const p = value as TaxProfile;
+  const source = p as unknown as Record<string, unknown>;
   const defaults = defaultTaxProfile(p.country);
   return Object.fromEntries(Object.keys(defaults).map(key => [key,
     key === 'customFlows' ? p.customFlows.map(f => ({ id: f.id, label: f.label.trim(), kind: f.kind,
-      annualAmount: f.annualAmount, inflationLinked: f.inflationLinked, deductible: f.deductible })) : p[key as keyof TaxProfile]])) as unknown as TaxProfile;
+      annualAmount: f.annualAmount, inflationLinked: f.inflationLinked, deductible: f.deductible }))
+      : source[key] ?? LEGACY_DEFAULTS[key]])) as unknown as TaxProfile;
 }
 
 export function italyIrpef2026(taxable: number): number {
   const x = Math.max(0, taxable);
   return Math.min(x, 28000) * 0.23 + Math.min(Math.max(0, x - 28000), 22000) * 0.33 + Math.max(0, x - 50000) * 0.43;
+}
+/** Quota del locatore (50%) dell'imposta di registro annua sulla locazione abitativa:
+ * 2% del canone; base al 70% per canone concordato in comuni ad alta tensione abitativa
+ * (art. 8 L. 431/1998); minimo 67 EUR sulla prima annualità. Bollo escluso. */
+export function italyLeaseRegistrationShare(annualRent: number, firstYear: boolean, concordato: boolean): number {
+  if (annualRent <= 0) return 0;
+  const tax = annualRent * (concordato ? 0.7 : 1) * 0.02;
+  return (firstYear ? Math.max(67, tax) : tax) / 2;
 }
 export function germanyIncomeTax2026(taxable: number, joint = false): number {
   const divisor = joint ? 2 : 1, x = Math.floor(Math.max(0, taxable) / divisor);
@@ -166,7 +182,9 @@ export function annualFiscal(profile: TaxProfile, input: {
     if (profile.regime === 'ordinary') {
       base.incomeTax = italyIrpef2026(profile.otherTaxableIncome + base.taxableRentalIncome) - italyIrpef2026(profile.otherTaxableIncome);
       base.surtax = base.taxableRentalIncome * profile.localSurtaxPercent / 100;
-      base.leaseDuties = profile.annualLeaseDuties;
+      base.leaseDuties = profile.leaseDutiesMode === 'auto'
+        ? italyLeaseRegistrationShare(rentReceived + customIncome, year === 1, profile.ordinaryConcordatoReduction)
+        : profile.annualLeaseDuties;
     } else {
       const rate = profile.regime === 'cedolare21' ? 21 : profile.regime === 'cedolare10' ? 10 : profile.customTaxPercent;
       base.incomeTax = base.taxableRentalIncome * rate / 100;
@@ -193,10 +211,12 @@ export function annualFiscal(profile: TaxProfile, input: {
 
 export const FISCAL_SOURCES = {
   italy: [
+    { title: 'Agenzia delle Entrate · Guida agli affitti', url: 'https://www.agenziaentrate.gov.it/portale/documents/20143/3015794/GUIDA%2BAFFITTI%2B17%2BOTTOBRE%2BINTERNET%2B%281%29.pdf' },
     { title: 'Agenzia delle Entrate · Locazioni abitative', url: 'https://infoprecompilata.agenziaentrate.gov.it/portale/sl/web/guest/semplificata-mod-fabbricati' },
     { title: 'MEF · TUIR art. 11 (2026)', url: 'https://def.finanze.it/DocTribFrontend/getArticoloDetailFromResultList.do?codiceOrdinamento=0000000000000110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000&id=%7BD5368F6F-A959-4AF5-A60F-8CB8BD99E176%7D&idAttoNormativo=%7B31D694E8-4398-4030-873B-FEAF5A6647F9%7D' },
     { title: 'Agenzia delle Entrate · Acquisto della casa', url: 'https://www1.agenziaentrate.gov.it/web_app_entrate/guida_acquisto_casa.html' },
     { title: 'Comune di Venezia · Base imponibile IMU', url: 'https://www.comune.venezia.it/it/node/28631' },
+    { title: 'Comune di Milano · IMU canone concordato', url: 'https://servizicrm.comune.milano.it/centro-supporto/KA-01874/IMU-calcolo-abitazione-locata-con-canone-concordato' },
   ],
   germany: [
     { title: 'EStG § 32a · Einkommensteuertarif 2026', url: 'https://www.gesetze-im-internet.de/estg/__32a.html' },
