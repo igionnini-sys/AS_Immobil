@@ -1,0 +1,1 @@
+{"name":"@immobil/web","version":"0.1.0","private":true,"type":"module","dependencies":{"@immobil/core":"0.1.0","@immobil/storage":"0.1.0","@immobil/i18n":"0.1.0","react":"19.3.1","react-dom":"19.3.1","@capacitor/core":"8.6.0","@capacitor/filesystem":"8.1.5","@capacitor/app":"8.1.2","@capacitor/share":"8.0.3","@capawesome/capacitor-file-picker":"8.1.1"}}

@@ -1,0 +1,56 @@
+{
+  "appId": "it.immobiliare.calcolatore",
+  "productName": "Immobiliare",
+  "directories": {
+    "app": "apps/desktop",
+    "output": "release"
+  },
+  "files": [
+    "main.mjs",
+    "preload.cjs",
+    "file-driver.mjs",
+    "dist/**",
+    "package.json",
+    {
+      "from": "../web/dist",
+      "to": "web",
+      "filter": [
+        "**/*"
+      ]
+    }
+  ],
+  "extraFiles": [],
+  "extraResources": [],
+  "extraMetadata": {
+    "version": "0.2.1"
+  },
+  "asar": true,
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      }
+    ],
+    "signAndEditExecutable": false
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true
+  },
+  "linux": {
+    "target": [
+      {
+        "target": "AppImage",
+        "arch": [
+          "x64"
+        ]
+      }
+    ],
+    "category": "Office",
+    "executableName": "immobiliare"
+  },
+  "artifactName": "Immobiliare-${version}-${os}-${arch}.${ext}"
+}

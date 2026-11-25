@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "appVersion": "0.2.1",
+  "modelVersion": "3.0.0",
+  "userReportedIssue": "schermata grigia con avvia.bat",
+  "cause": "windowsHide=true impediva la corretta apertura della finestra nella prova con window.show; la correzione richiede conferma nell?uso normale dell?utente.",
+  "checks": {
+    "lint": "passed",
+    "typecheck": "passed",
+    "tests": 68,
+    "visibleSourceWithCopiedUserData": "passed",
+    "visiblePackagedWithCopiedUserData": "passed",
+    "missingInterfaceFailure": "passed",
+    "softwareRendering": "disabled_software",
+    "launcherWithWindowsHide": "failed_WINDOW_NOT_VISIBLE",
+    "launcherWithoutWindowsHide": "passed",
+    "nativeDesktopScreenshot": "passed",
+    "avviaBatVisibleSmoke": "passed"
+  },
+  "artifact": {
+    "path": "release/Immobiliare-0.2.1-win-x64.exe",
+    "bytes": 121345924,
+    "sha256": "d306b661a7d717fda66f67e4e072e0d4b1476cae5be35d7d69ca8d317746224a"
+  }
+}

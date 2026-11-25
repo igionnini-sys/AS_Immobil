@@ -1,0 +1,14 @@
+node_modules/
+.tools/
+dist/
+release/
+coverage/
+test-results/
+*.log
+__pycache__/
+.env*
+apps/mobile/android/.gradle/
+apps/mobile/android/local.properties
+apps/mobile/android/**/build/
+*.jks
+*.keystore

@@ -1,0 +1,9 @@
+{
+  "name": "@immobil/desktop",
+  "version": "0.2.1",
+  "private": true,
+  "type": "module",
+  "main": "main.mjs",
+  "description": "Analisi investimenti immobiliari",
+  "author": "Immobiliare"
+}

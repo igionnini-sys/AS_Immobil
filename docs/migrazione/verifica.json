@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-30",
+  "appVersion": "0.1.0",
+  "modelVersion": "2.0.0",
+  "tests": {
+    "passed": 39,
+    "files": 4,
+    "lint": "passed",
+    "typecheck": "passed",
+    "cleanInstall": "passed"
+  },
+  "artifacts": [
+    {
+      "path": "release/Immobiliare-0.1.0-win-x64.exe",
+      "bytes": 121334662,
+      "sha256": "4215c4abc38861332e326ede3bdb32b085291b862b8ad741ca2db6cd423820ac"
+    },
+    {
+      "path": "apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk",
+      "bytes": 4379479,
+      "sha256": "54654fd579716ba75e5aa6806a519cc340f51e6e102144a663538e402565a297"
+    },
+    {
+      "path": "apps/mobile/android/app/build/outputs/bundle/release/app-release.aab",
+      "bytes": 3194445,
+      "sha256": "2cabd03a795e0bfc97035163b2371086facf65a7f5ee08341e3d2650a3942f96"
+    }
+  ],
+  "native": {
+    "windows": "renderer e persistenza verificati dal pacchetto",
+    "android": "avvio, calcolo, persistenza, riapertura e backup su emulatore API36",
+    "linux": "non verificato"
+  },
+  "aabHasSignature": false,
+  "sourceSha256": {
+    "package.json": "1e75b984b6406b86b8958979bdf58478c0e85def1e76bc96b98ebfbb73878ec2",
+    "package-lock.json": "056ea60b09b1fe78506ed87acba539ea68ca249a5c34905b4fadf123f989d91e",
+    "packages/core/src/index.ts": "50d3a74edaa246cf2018bcd73fe3036b6b0e76a4b7f27ac4a812c444f52b7f20",
+    "packages/storage/src/index.ts": "f6bc888454478f88e61891893f4021ea891287ed57ef1bd8023ad3bff281d6cc",
+    "apps/web/src/App.tsx": "082e4405d1a394d96eae67b755b9a4b45ce620c12e8fa4ef494a346c91108740",
+    "apps/web/src/adapters.ts": "548cb1774b6ad40e85b02ad65531dbb77720e33ef29290ba9364b0bee61e8872",
+    "apps/desktop/main.mjs": "d7d2c73e65ce3a4bf0ec8a6d2e9bbbc5f2cf26e6713c34057ff5229dc24dd2e1",
+    "apps/desktop/preload.cjs": "8f602135947b6c3976474b098cd1f6305d02e1d567e23900c68815b1312d13e4"
+  }
+}

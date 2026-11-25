@@ -1,0 +1,318 @@
+{
+  "schemaVersion": 1,
+  "project": "Immobiliare",
+  "updatedOn": "2026-10-30",
+  "timezone": "Europe/Rome",
+  "status": "implementation_in_progress",
+  "implementationStarted": true,
+  "currentPhase": "M5",
+  "nextAction": "Completare qualificazione Linux e verifiche native M5/M6 elencate in VERIFICHE.md; poi chiudere M7.",
+  "architecture": {
+    "language": "TypeScript",
+    "developmentRuntime": "Node.js 24.15.0 verificato; dipendenze esatte in package-lock.json",
+    "ui": "React + Vite",
+    "desktop": "Electron per Windows e Linux",
+    "android": "Capacitor con WebView e plugin nativi",
+    "sharedCore": "Calcoli offline senza dipendenze Node o Python",
+    "persistence": "JSON versionato con adapter per piattaforma e backup"
+  },
+  "phases": [
+    {
+      "id": "M0",
+      "title": "Analisi e piano",
+      "status": "done",
+      "dependsOn": []
+    },
+    {
+      "id": "M1",
+      "title": "Base Node.js e contratti",
+      "status": "done",
+      "dependsOn": [
+        "M0"
+      ]
+    },
+    {
+      "id": "M2",
+      "title": "Motore e confronto numerico",
+      "status": "done",
+      "dependsOn": [
+        "M1"
+      ]
+    },
+    {
+      "id": "M3",
+      "title": "Interfaccia e traduzioni",
+      "status": "done",
+      "dependsOn": [
+        "M2"
+      ]
+    },
+    {
+      "id": "M4",
+      "title": "Persistenza e import/export",
+      "status": "done",
+      "dependsOn": [
+        "M1"
+      ]
+    },
+    {
+      "id": "M5",
+      "title": "Windows e Linux",
+      "status": "in_progress",
+      "dependsOn": [
+        "M2",
+        "M3",
+        "M4"
+      ]
+    },
+    {
+      "id": "M6",
+      "title": "Android",
+      "status": "in_progress",
+      "dependsOn": [
+        "M2",
+        "M3",
+        "M4"
+      ]
+    },
+    {
+      "id": "M7",
+      "title": "Verifica finale e consegna",
+      "status": "todo",
+      "dependsOn": [
+        "M5",
+        "M6"
+      ]
+    }
+  ],
+  "platformVerification": {
+    "windows": {
+      "status": "packaged_smoke_passed",
+      "artifact": "release/Immobiliare-0.2.1-win-x64.exe",
+      "pending": [
+        "revisione visiva desktop completa",
+        "installazione e aggiornamento"
+      ]
+    },
+    "linux": {
+      "status": "not_run",
+      "artifact": null,
+      "pending": [
+        "build AppImage su Linux",
+        "avvio e verifica nativa"
+      ]
+    },
+    "android": {
+      "status": "emulator_smoke_passed",
+      "artifact": "release/Immobiliare-0.2.0-android-debug.apk",
+      "device": "Android 16 API 36 x86_64, WebView 133",
+      "passed": [
+        "installazione e avvio",
+        "controllo screenshot mobile",
+        "calcolo",
+        "salvataggio file privato",
+        "riapertura bozza",
+        "recupero backup corrotto",
+        "UI fiscale Italia/Germania e bozze indipendenti (0.2.0)"
+      ],
+      "pending": [
+        "dispositivo fisico",
+        "import/export con selettori nativi",
+        "rotazione e sospensione",
+        "aggiornamento"
+      ],
+      "bundle": "release/Immobiliare-0.2.0-android-release-unsigned.aab"
+    }
+  },
+  "checks": [
+    {
+      "name": "Inventario Python e traduzioni via AST",
+      "status": "passed"
+    },
+    {
+      "name": "Acquisizione baseline Python e hash",
+      "status": "passed",
+      "command": "python docs/migrazione/genera_baseline.py"
+    },
+    {
+      "name": "JSON, sintassi generatore, collegamenti locali, artefatti e hash sorgenti",
+      "status": "passed"
+    },
+    {
+      "name": "Reinstallazione riproducibile",
+      "command": "npm ci",
+      "status": "passed"
+    },
+    {
+      "name": "Controlli statici",
+      "command": "npm run lint e npm run typecheck",
+      "status": "passed"
+    },
+    {
+      "name": "39 test in 4 file",
+      "command": "npm test",
+      "status": "passed"
+    },
+    {
+      "name": "Build asset e bundle desktop",
+      "command": "npm run build",
+      "status": "passed"
+    },
+    {
+      "name": "Packaging Windows",
+      "command": "npm run desktop:dist",
+      "status": "passed"
+    },
+    {
+      "name": "Avvio e persistenza eseguibile confezionato",
+      "command": "node scripts/desktop-run.mjs --packaged --smoke-test",
+      "status": "passed"
+    },
+    {
+      "name": "APK Android",
+      "command": "npm run android:debug",
+      "status": "passed"
+    },
+    {
+      "name": "Prove native Android",
+      "command": "adb su emulator-5580; dettagli in VERIFICHE.md",
+      "status": "passed"
+    },
+    {
+      "name": "AAB release (firma produzione assente)",
+      "command": "node scripts/android-build.mjs bundleRelease",
+      "status": "passed"
+    },
+    {
+      "name": "Profili fiscali nazionali: lint, tipi, 67 test e build",
+      "command": "npm run lint; npm test; npm run build",
+      "status": "passed"
+    },
+    {
+      "name": "Pacchetto 0.2.0 Windows e APK/AAB Android",
+      "status": "passed"
+    },
+    {
+      "name": "UI fiscali e persistenza separata su Android API36",
+      "status": "passed"
+    },
+    {
+      "name": "Avvio rapido Windows da altra directory",
+      "command": "avvia.bat --smoke-test",
+      "status": "passed"
+    },
+    {
+      "name": "Sintassi e avvio script sh tramite Git Bash su Windows",
+      "command": "bash avvia.sh --smoke-test",
+      "status": "passed",
+      "note": "Non equivale a prova nativa su Linux"
+    },
+    {
+      "name": "Avvio visibile da avvia.bat con copia dati reali e rendering software",
+      "status": "passed"
+    },
+    {
+      "name": "Avvio visibile del pacchetto Windows con copia dati reali",
+      "status": "passed"
+    },
+    {
+      "name": "Interfaccia mancante rilevata senza blocco",
+      "status": "passed"
+    },
+    {
+      "name": "Lint, tipi e 68 test",
+      "status": "passed"
+    },
+    {
+      "name": "Avvio da avvia.bat con finestra realmente visibile",
+      "command": "avvia.bat --smoke-test --smoke-show",
+      "status": "passed"
+    }
+  ],
+  "knownIssues": [
+    "N04"
+  ],
+  "environmentGaps": [
+    "Host Linux per verifica nativa",
+    "Dispositivo Android fisico",
+    "Browser della sessione non disponibile per verifica visiva desktop"
+  ],
+  "blockers": [],
+  "artifacts": [
+    "README.md",
+    "ANALISI.md",
+    "PIANO.md",
+    "DECISIONI.md",
+    "PROGRESSI.md",
+    "stato.json",
+    "baseline.json",
+    "genera_baseline.py",
+    "VERIFICHE.md",
+    "legacy-v1.zip",
+    "verifica.json",
+    "evidenze/android-avvio.png",
+    "evidenze/android-risultati.xml",
+    "evidenze/android-recupero.xml",
+    "evidenze/android-riapertura.xml",
+    "verifica-fiscalita.json",
+    "evidenze/android-fiscalita-italia.png",
+    "evidenze/android-fiscalita-germania.png"
+  ],
+  "resolvedIssues": [
+    "N01",
+    "N02",
+    "N03",
+    "N05",
+    "N06",
+    "U01",
+    "U02",
+    "U03",
+    "M01"
+  ],
+  "retainedModelLimitations": [
+    "N04: ROE stimato; nessun ammortamento o debito residuo",
+    "Sola ristrutturazione con acquisto zero: comportamento conservato e segnalato"
+  ],
+  "initialIssues": [
+    "N01",
+    "N02",
+    "N03",
+    "N04",
+    "N05",
+    "N06",
+    "U01",
+    "U02",
+    "U03",
+    "M01"
+  ],
+  "appVersion": "0.2.1",
+  "modelVersion": "3.0.0",
+  "archiveSchema": 2,
+  "features": {
+    "nationalTaxProfiles": {
+      "status": "implemented_and_tested",
+      "scope": "Casi nazionali dei privati, confermato dall?utente",
+      "countries": [
+        "italy",
+        "germany"
+      ],
+      "rulesYear": 2026,
+      "documentation": "docs/FISCALITA.md",
+      "testsPassed": 67,
+      "saleTax": "manual"
+    }
+  },
+  "desktopStartupFix": {
+    "status": "implemented_pending_user_confirmation",
+    "originalIssue": "Schermata grigia con avvia.bat",
+    "cause": "Il launcher avviava il processo interattivo con windowsHide=true; la prova con window.show rilevava WINDOW_NOT_VISIBLE. Con windowsHide=false la prova e la visualizzazione sul desktop sono riuscite.",
+    "windowsSoftwareRendering": true,
+    "startupReadyHandshake": true,
+    "sourceAndPackagedSmoke": "passed",
+    "failureHandling": "passed",
+    "testsPassed": 68,
+    "diagnosticCopiesCleanup": "blocked_by_environment_policy",
+    "windowsHide": false,
+    "desktopScreenshotVerified": true
+  }
+}

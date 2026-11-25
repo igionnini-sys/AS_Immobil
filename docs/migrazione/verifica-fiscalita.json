@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-30",
+  "appVersion": "0.2.0",
+  "modelVersion": "3.0.0",
+  "archiveSchema": 2,
+  "taxRulesYear": 2026,
+  "scope": "Persone fisiche residenti, immobili nazionali residenziali locati a lungo termine, intera propriet?",
+  "tests": {
+    "passed": 67,
+    "files": 5,
+    "lint": "passed",
+    "typecheck": "passed",
+    "build": "passed"
+  },
+  "native": {
+    "windows": "smoke confezionato superato: renderer e scrittura IPC",
+    "android": "UI Italia/Germania e archivio con bozze indipendenti verificati su API 36; screenshot in evidenze/",
+    "linux": "non verificato"
+  },
+  "artifacts": [
+    {
+      "path": "release/Immobiliare-0.2.0-win-x64.exe",
+      "bytes": 121344899,
+      "sha256": "105b1f24dca9b003915a7d31e972883384a53284cbce970aba2d46b2589f8037"
+    },
+    {
+      "path": "release/Immobiliare-0.2.0-android-debug.apk",
+      "bytes": 4391943,
+      "sha256": "f376b94ac51a55e1dfcf7fe386f350ebdaccfc1c0d1447c02f340fdda1d3f4e4"
+    },
+    {
+      "path": "release/Immobiliare-0.2.0-android-release-unsigned.aab",
+      "bytes": 3204313,
+      "sha256": "c5f71733e4b079c2a858e980ceebc889f11b08076bb70b89c1663de0b8bdee4b"
+    }
+  ]
+}
