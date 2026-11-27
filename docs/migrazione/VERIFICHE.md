@@ -68,9 +68,13 @@ Configurazione Electron/AppImage x64 presente. Nessun host Linux disponibile per
 | N01 | TIR con controllo del residuo, intervallo e iterazioni limitati; più cambi di segno producono esito ambiguo, senza radice arbitraria |
 | N02 | Commissione finale deflazionata insieme al flusso terminale; anche rendimento reale e CAGR reale usano la commissione attualizzata |
 | N03 | Per il ROI reale le rate riaggiunte sono deflazionate; test indipendente di equivalenza al caso senza mutuo |
-| N04 | ROE con mutuo resta una stima sul capitale totale, dichiarata nella UI; non sono inventati dati del finanziamento |
+| N04 | ROE con mutuo resta una stima sul capitale totale, dichiarata nella UI; non sono inventati dati del finanziamento. Superata da N07 quando il debito residuo è indicato |
 | N05 | Validazione su UI, motore e import; massimo operativo 100 anni e importi limitati a 10^12 EUR dove non esisteva un massimo |
 | N06 | Annualizzazione con capitale finale negativo restituisce valore assente e spiegazione, mai numeri complessi nel JSON |
+| N07 | Debito residuo del mutuo facoltativo: flusso iniziale pari al capitale proprio, tasso implicito da debito, rata e anni, estinzione del debito residuo alla vendita. Con debito zero i risultati coincidono con la baseline; test su piano di ammortamento, equivalenza del ROI senza leva e validazione |
+| N08 | Solo sezioni Italia e Germania: costi fissi e assicurazione del primo anno pari agli importi inseriti, manutenzione sul valore a inizio anno, primo adeguamento del canone dopo N anni interi. La sezione Generale resta identica alla baseline |
+| N09 | TIR con più cambi di segno: se i flussi cumulati partono negativi e cambiano segno una sola volta (criterio di Norström) si riporta l'unico TIR positivo con un avviso; negli altri casi resta l'esito ambiguo. Massimi di assicurazione, costi fissi e rata portati a 10^12 EUR come gli altri importi; nessun caso della baseline dipendeva dai limiti della UI Python |
+| N10 | Solo sezioni Italia e Germania: con sola ristrutturazione e acquisto a zero l'immobile è già posseduto e non si applicano imposte di acquisto |
 
 Il comportamento «sola ristrutturazione con acquisto a zero» è conservato e segnalato nella UI. `MODEL_VERSION` separa i nuovi risultati dalla baseline `legacy-v1`; il riferimento originale non è stato aggiornato per eliminare differenze.
 

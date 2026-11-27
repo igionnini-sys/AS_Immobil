@@ -13,15 +13,21 @@ interface CommonProfile {
   exitTaxAmount: number;
   customFlows: CustomFlow[];
 }
+/** Tipo prevalente dell'altro reddito, per stimare le detrazioni da lavoro che il canone riduce. */
+export type ItalyIncomeType = 'none' | 'employee' | 'pension' | 'self_employed';
 export interface ItalyProfile extends CommonProfile {
   country: 'italy';
   regime: 'cedolare21' | 'cedolare10' | 'ordinary' | 'custom';
   reducedRateEligible: boolean;
   customTaxPercent: number;
   otherTaxableIncome: number;
+  otherIncomeType: ItalyIncomeType;
   localSurtaxPercent: number;
+  vacantSameMunicipality: 'unknown' | 'yes' | 'no';
+  renegotiateRent: boolean;
   cadastralRent: number;
   imuRatePermille: number;
+  imuVacantRatePermille: number;
   imuConcordatoReduction: boolean;
   ordinaryConcordatoReduction: boolean;
   /** 'auto': quota locatore del registro calcolata sul canone; 'manual': annualLeaseDuties. */
@@ -45,6 +51,10 @@ export interface GermanyProfile extends CommonProfile {
   afaRatePercent: number;
   grundsteuerAnnual: number;
   transferTaxPercent: number;
+  /** Deduce la Grundsteuer a parte, senza includerla nei costi operativi deducibili. */
+  autoDeductGrundsteuer: boolean;
+  /** Aggiunge alla base AfA la quota fabbricato dei costi accessori d'acquisto. */
+  afaIncludesAcquisitionCosts: boolean;
 }
 export type TaxProfile = ItalyProfile | GermanyProfile;
 export const sectionOf = (value: { taxProfile?: TaxProfile }): Section => value.taxProfile?.country ?? 'generic';
@@ -54,13 +64,15 @@ export function defaultTaxProfile(country: Exclude<Section, 'generic'>): TaxProf
 export function defaultTaxProfile(country: Exclude<Section, 'generic'>): TaxProfile {
   const common = { rulesYear: 2026 as const, additionalAcquisitionCosts: 0, exitTaxAmount: 0, customFlows: [] };
   return country === 'italy' ? { ...common, country, regime: 'cedolare21', reducedRateEligible: false,
-    customTaxPercent: 21, otherTaxableIncome: 30000, localSurtaxPercent: 2,
-    cadastralRent: 800, imuRatePermille: 10.6, imuConcordatoReduction: false,
+    customTaxPercent: 21, otherTaxableIncome: 30000, otherIncomeType: 'employee', localSurtaxPercent: 2,
+    vacantSameMunicipality: 'unknown', renegotiateRent: false,
+    cadastralRent: 800, imuRatePermille: 10.6, imuVacantRatePermille: 10.6, imuConcordatoReduction: false,
     ordinaryConcordatoReduction: false, leaseDutiesMode: 'auto', annualLeaseDuties: 0,
     purchaseTaxMode: 'manual', priceValueEligible: false, manualPurchaseTax: 0 }
     : { ...common, country, otherTaxableIncome: 40000, jointAssessment: false, churchTaxPercent: 0,
-      applySoli: true, allowLossOffset: false, deductibleOperatingAnnual: 0, deductibleInterestAnnual: 0,
-      buildingTaxBasis: 0, alreadyDepreciated: 0, afaRatePercent: 2, grundsteuerAnnual: 0, transferTaxPercent: 3.5 };
+      applySoli: true, allowLossOffset: true, deductibleOperatingAnnual: 0, deductibleInterestAnnual: 0,
+      buildingTaxBasis: 0, alreadyDepreciated: 0, afaRatePercent: 2, grundsteuerAnnual: 0, transferTaxPercent: 3.5,
+      autoDeductGrundsteuer: true, afaIncludesAcquisitionCosts: true };
 }
 
 export interface FiscalIssue { field: string; code: 'range' | 'boolean' | 'choice' | 'required' }
@@ -92,6 +104,10 @@ export const fiscalIssues = (value: unknown): FiscalIssue[] => {
     choice('purchaseTaxMode', ['manual', 'second_home_private']);
     // Assente negli archivi creati prima del modello 3.1.0: vedi LEGACY_DEFAULTS.
     if (p.leaseDutiesMode !== undefined) choice('leaseDutiesMode', ['auto', 'manual']);
+    if (p.vacantSameMunicipality !== undefined) choice('vacantSameMunicipality', ['unknown', 'yes', 'no']);
+    if (p.renegotiateRent !== undefined) bool('renegotiateRent');
+    if (p.otherIncomeType !== undefined) choice('otherIncomeType', ['none', 'employee', 'pension', 'self_employed']);
+    if (p.imuVacantRatePermille !== undefined) number('imuVacantRatePermille', 0, 30);
     for (const f of ['reducedRateEligible', 'imuConcordatoReduction', 'ordinaryConcordatoReduction', 'priceValueEligible']) bool(f);
     for (const f of ['otherTaxableIncome', 'cadastralRent', 'annualLeaseDuties', 'manualPurchaseTax']) number(f);
     number('customTaxPercent', 0, 100); number('localSurtaxPercent', 0, 20); number('imuRatePermille', 0, 30);
@@ -101,13 +117,16 @@ export const fiscalIssues = (value: unknown): FiscalIssue[] => {
   } else if (p.country === 'germany') {
     for (const f of ['otherTaxableIncome', 'deductibleOperatingAnnual', 'deductibleInterestAnnual', 'buildingTaxBasis', 'alreadyDepreciated', 'grundsteuerAnnual']) number(f);
     for (const f of ['jointAssessment', 'applySoli', 'allowLossOffset']) bool(f);
+    // Assenti nei profili creati prima del modello 3.3.0: vedi LEGACY_DEFAULTS.
+    for (const f of ['autoDeductGrundsteuer', 'afaIncludesAcquisitionCosts']) if (p[f] !== undefined) bool(f);
     choice('churchTaxPercent', [0, 8, 9]); number('afaRatePercent', 0, 100); number('transferTaxPercent', 0, 10);
     if (Number(p.alreadyDepreciated) > Number(p.buildingTaxBasis)) issues.push({ field: 'alreadyDepreciated', code: 'range' });
   }
   return issues;
 };
 /** Valori per campi introdotti dopo la creazione dell'archivio: conservano il comportamento precedente. */
-const LEGACY_DEFAULTS: Record<string, unknown> = { leaseDutiesMode: 'manual' };
+const LEGACY_DEFAULTS: Record<string, unknown> = { leaseDutiesMode: 'manual', vacantSameMunicipality: 'unknown', renegotiateRent: false, otherIncomeType: 'none',
+  autoDeductGrundsteuer: false, afaIncludesAcquisitionCosts: false };
 export function parseTaxProfile(value: unknown): TaxProfile {
   const issues = fiscalIssues(value);
   if (issues.length) throw new Error(`INVALID_TAX_PROFILE:${issues.map(i => i.field).join(',')}`);
@@ -117,12 +136,45 @@ export function parseTaxProfile(value: unknown): TaxProfile {
   return Object.fromEntries(Object.keys(defaults).map(key => [key,
     key === 'customFlows' ? p.customFlows.map(f => ({ id: f.id, label: f.label.trim(), kind: f.kind,
       annualAmount: f.annualAmount, inflationLinked: f.inflationLinked, deductible: f.deductible }))
-      : source[key] ?? LEGACY_DEFAULTS[key]])) as unknown as TaxProfile;
+      : source[key] ?? (key === 'imuVacantRatePermille' ? source.imuRatePermille : LEGACY_DEFAULTS[key])])) as unknown as TaxProfile;
 }
 
 export function italyIrpef2026(taxable: number): number {
   const x = Math.max(0, taxable);
   return Math.min(x, 28000) * 0.23 + Math.min(Math.max(0, x - 28000), 22000) * 0.33 + Math.max(0, x - 50000) * 0.43;
+}
+/** Detrazioni 2026 non rimborsabili che calano col reddito complessivo: art. 13 TUIR per tipo di reddito
+ * e, per i dipendenti, ulteriore detrazione dell'art. 1 c. 6 L. 207/2024. Anno intero, nessuna altra detrazione. */
+export function italyWorkDeduction2026(type: ItalyIncomeType, complessivo: number): number {
+  const x = Math.max(0, complessivo);
+  if (type === 'employee') {
+    const base = x <= 15000 ? 1955 : x <= 28000 ? 1910 + 1190 * (28000 - x) / 13000 : x <= 50000 ? 1910 * (50000 - x) / 22000 : 0;
+    const extra = x > 20000 && x <= 32000 ? 1000 : x > 32000 && x <= 40000 ? 1000 * (40000 - x) / 8000 : 0;
+    return base + (x > 25000 && x <= 35000 ? 65 : 0) + extra;
+  }
+  if (type === 'pension') {
+    const base = x <= 8500 ? 1955 : x <= 28000 ? 700 + 1255 * (28000 - x) / 19500 : x <= 50000 ? 700 * (50000 - x) / 22000 : 0;
+    return base + (x > 25000 && x <= 29000 ? 50 : 0);
+  }
+  if (type === 'self_employed') {
+    const base = x <= 5500 ? 1265 : x <= 28000 ? 500 + 765 * (28000 - x) / 22500 : x <= 50000 ? 500 * (50000 - x) / 22000 : 0;
+    return base + (x > 11000 && x <= 17000 ? 50 : 0);
+  }
+  return 0;
+}
+/** Somma esente per dipendenti con reddito complessivo fino a 20.000 EUR (art. 1 c. 4 L. 207/2024),
+ * in percentuale del reddito di lavoro: 7,1% fino a 8.500, 5,3% fino a 15.000, 4,8% oltre. */
+export function italyEmployeeExemptSum2026(workIncome: number, complessivo: number): number {
+  if (workIncome <= 0 || complessivo > 20000) return 0;
+  return workIncome * (workIncome <= 8500 ? 0.071 : workIncome <= 15000 ? 0.053 : 0.048);
+}
+/** IRPEF netta delle detrazioni da lavoro, meno la somma esente. L'altro reddito è tutto del tipo indicato;
+ * il reddito a imposta sostitutiva non entra nell'IRPEF ma conta per detrazioni e benefici (art. 3 c. 7 D.Lgs. 23/2011). */
+export function italyPersonalTax2026(type: ItalyIncomeType, otherIncome: number, addedTaxable = 0, addedSubstitute = 0): number {
+  if (type === 'none' || otherIncome <= 0) return italyIrpef2026(otherIncome + addedTaxable);
+  const complessivo = otherIncome + addedTaxable + addedSubstitute;
+  const net = Math.max(0, italyIrpef2026(otherIncome + addedTaxable) - italyWorkDeduction2026(type, complessivo));
+  return net - (type === 'employee' ? italyEmployeeExemptSum2026(otherIncome, complessivo) : 0);
 }
 /** Quota del locatore (50%) dell'imposta di registro annua sulla locazione abitativa:
  * 2% del canone; base al 70% per canone concordato in comuni ad alta tensione abitativa
@@ -144,6 +196,17 @@ export function germanySoli2026(incomeTax: number, joint = false): number {
   const threshold = joint ? 40700 : 20350;
   return Math.floor(Math.max(0, Math.min(incomeTax * 0.055, (incomeTax - threshold) * 0.119)) * 100 + 1e-8) / 100;
 }
+/** Vendita privata entro 10 anni (§23 EStG): plusvalenza all'aliquota personale, esente sotto 1.000 EUR (Freigrenze).
+ * Le perdite ancora riportate la riducono. Restituisce l'aumento di imposta sul reddito, Soli e Kirchensteuer. */
+export const GERMANY_PRIVATE_SALE_YEARS = 10, GERMANY_PRIVATE_SALE_EXEMPTION = 1000;
+export function germanyPrivateSaleTax2026(profile: GermanyProfile, gain: number, assessedIncome: number, lossCarryforward = 0): number {
+  if (gain < GERMANY_PRIVATE_SALE_EXEMPTION) return 0;
+  const tax = (income: number) => {
+    const est = germanyIncomeTax2026(income, profile.jointAssessment);
+    return est + (profile.applySoli ? germanySoli2026(est, profile.jointAssessment) : 0) + est * profile.churchTaxPercent / 100;
+  };
+  return tax(assessedIncome + Math.max(0, gain - lossCarryforward)) - tax(assessedIncome);
+}
 export function acquisitionTax(profile: TaxProfile, purchasePrice: number): number {
   if (profile.country === 'germany') return Math.floor(purchasePrice * profile.transferTaxPercent / 100);
   return profile.purchaseTaxMode === 'manual' ? profile.manualPurchaseTax
@@ -152,6 +215,13 @@ export function acquisitionTax(profile: TaxProfile, purchasePrice: number): numb
 
 export interface FiscalYear {
   year: number; rentReceived: number; taxableRentalIncome: number;
+  vacantTaxableIncome: number;
+  /** Parte di incomeTax dovuta alla riduzione di detrazioni e somma esente (solo Italia). */
+  lostDeductions: number;
+  /** Germania: perdite da locazione ancora da riportare a fine anno (§10d EStG). */
+  lossCarryforward: number;
+  /** Germania: reddito imponibile complessivo con l'investimento, dopo l'uso delle perdite riportate. */
+  assessedIncome: number;
   incomeTax: number; propertyTax: number; surtax: number; solidarity: number; churchTax: number;
   leaseDuties: number; depreciation: number; operatingDeduction: number; interestDeduction: number;
   operatingDeductionRequested: number;
@@ -159,50 +229,84 @@ export interface FiscalYear {
 }
 export function annualFiscal(profile: TaxProfile, input: {
   year: number; rentReceived: number; operatingCashCosts: number; mortgageCash: number; inflation: number; occupiedFraction?: number;
+  /** Canone dell'anno diviso per il canone iniziale: con la cedolare le voci accessorie indicizzate seguono il nuovo accordo. */
+  rentIndex?: number;
+  /** Germania: perdite riportate dagli anni precedenti. */
+  lossCarryforward?: number;
+  /** Germania: interessi effettivi dell'anno dal piano del mutuo; se assente si usa l'importo inserito. */
+  mortgageInterest?: number;
+  /** Germania: quota fabbricato dei costi accessori d'acquisto da aggiungere alla base AfA. */
+  afaBasisExtra?: number;
 }): FiscalYear {
   const { year, rentReceived, operatingCashCosts, mortgageCash, inflation } = input;
   const index = inflation ** (year - 1);
   let customIncome = 0, customExpenses = 0, customDeductible = 0;
   for (const flow of profile.customFlows) {
     const fixedAccessoryRent = profile.country === 'italy' && ['cedolare21', 'cedolare10'].includes(profile.regime) && flow.kind === 'income';
-    const amount = flow.annualAmount * (flow.inflationLinked && !fixedAccessoryRent ? index : 1);
+    const occupancy = profile.country === 'italy' && flow.kind === 'income' ? (input.occupiedFraction ?? 1) : 1;
+    const amount = flow.annualAmount * (flow.inflationLinked ? (fixedAccessoryRent ? input.rentIndex ?? 1 : index) : 1) * occupancy;
     if (flow.kind === 'income') customIncome += amount;
     else { customExpenses += amount; if (flow.deductible) customDeductible += amount; }
   }
-  const base: FiscalYear = { year, rentReceived, taxableRentalIncome: 0, incomeTax: 0, propertyTax: 0,
+  const base: FiscalYear = { year, rentReceived, taxableRentalIncome: 0, vacantTaxableIncome: 0, lostDeductions: 0, lossCarryforward: 0, assessedIncome: 0, incomeTax: 0, propertyTax: 0,
     surtax: 0, solidarity: 0, churchTax: 0, leaseDuties: 0, depreciation: 0,
     operatingDeduction: 0, operatingDeductionRequested: 0, interestDeduction: 0, customIncome, customExpenses };
   if (profile.country === 'italy') {
-    base.propertyTax = profile.cadastralRent * 1.05 * 160 * profile.imuRatePermille / 1000 * (profile.imuConcordatoReduction ? 0.75 : 1);
+    const occupied = input.occupiedFraction ?? 1;
+    const vacant = 1 - occupied;
+    const vacantRate = profile.imuVacantRatePermille ?? profile.imuRatePermille;
+    base.propertyTax = profile.cadastralRent * 1.05 * 160 / 1000 *
+      (occupied * profile.imuRatePermille * (profile.imuConcordatoReduction ? 0.75 : 1) + vacant * vacantRate);
     // Ipotesi: intero anno, intera proprietà, immobile residenziale locato.
     // La quota sfitto riduce il canone contrattuale simulato, non simula morosità.
-    const rentBase = Math.max(profile.cadastralRent * 1.05 * (input.occupiedFraction ?? 1), (rentReceived + customIncome) * (profile.regime === 'ordinary' ? 0.95 : 1));
+    const rentBase = profile.regime === 'ordinary'
+      ? Math.max(profile.cadastralRent * 1.05 * (input.occupiedFraction ?? 1), (rentReceived + customIncome) * 0.95)
+      : profile.regime === 'custom' ? rentReceived + customIncome
+        : Math.max(profile.cadastralRent * 1.05 * occupied, rentReceived + customIncome);
     const reducedBase = profile.regime === 'ordinary' && profile.ordinaryConcordatoReduction ? rentBase * 0.7 : rentBase;
     base.taxableRentalIncome = reducedBase;
-    if (profile.regime === 'ordinary') {
-      base.incomeTax = italyIrpef2026(profile.otherTaxableIncome + base.taxableRentalIncome) - italyIrpef2026(profile.otherTaxableIncome);
-      base.surtax = base.taxableRentalIncome * profile.localSurtaxPercent / 100;
+    // Durante lo sfitto l'immobile è ipotizzato a disposizione: rendita maggiorata di un terzo.
+    base.vacantTaxableIncome = profile.vacantSameMunicipality === 'yes' ? profile.cadastralRent * 1.05 * 4 / 3 * vacant * 0.5 : 0;
+    const ordinaryIncome = base.vacantTaxableIncome + (profile.regime === 'ordinary' ? base.taxableRentalIncome : 0);
+    const other = profile.otherTaxableIncome, type = profile.otherIncomeType;
+    const substituteIncome = profile.regime === 'ordinary' ? 0 : base.taxableRentalIncome;
+    base.incomeTax = italyPersonalTax2026(type, other, ordinaryIncome, substituteIncome) - italyPersonalTax2026(type, other);
+    base.lostDeductions = base.incomeTax - (italyIrpef2026(other + ordinaryIncome) - italyIrpef2026(other));
+    base.surtax = ordinaryIncome * profile.localSurtaxPercent / 100;
+    // Il registro è dovuto fuori dalla cedolare, quindi anche con l'aliquota personalizzata.
+    if (profile.regime === 'ordinary' || profile.regime === 'custom') {
       base.leaseDuties = profile.leaseDutiesMode === 'auto'
-        ? italyLeaseRegistrationShare(rentReceived + customIncome, year === 1, profile.ordinaryConcordatoReduction)
+        ? italyLeaseRegistrationShare(rentReceived + customIncome, year === 1, profile.regime === 'ordinary' && profile.ordinaryConcordatoReduction)
         : profile.annualLeaseDuties;
-    } else {
+    }
+    if (profile.regime !== 'ordinary') {
       const rate = profile.regime === 'cedolare21' ? 21 : profile.regime === 'cedolare10' ? 10 : profile.customTaxPercent;
-      base.incomeTax = base.taxableRentalIncome * rate / 100;
+      base.incomeTax += base.taxableRentalIncome * rate / 100;
     }
     // Le voci di ricavo personalizzate italiane rappresentano canoni accessori
     // soggetti allo stesso regime. Spese effettive non dedotte dalla cedolare/IRPEF fondiaria.
     return base;
   }
   base.propertyTax = profile.grundsteuerAnnual;
-  base.operatingDeductionRequested = profile.deductibleOperatingAnnual * index + customDeductible;
-  base.operatingDeduction = Math.min(profile.deductibleOperatingAnnual * index, operatingCashCosts + base.propertyTax) + customDeductible;
-  base.interestDeduction = Math.min(profile.deductibleInterestAnnual, mortgageCash);
-  base.depreciation = Math.min(profile.buildingTaxBasis * profile.afaRatePercent / 100,
-    Math.max(0, profile.buildingTaxBasis - profile.alreadyDepreciated - (year - 1) * profile.buildingTaxBasis * profile.afaRatePercent / 100));
+  // La Grundsteuer rimasta al proprietario è sempre deducibile: se automatica, è esclusa dai costi operativi indicati.
+  const grundsteuerDeduction = profile.autoDeductGrundsteuer ? base.propertyTax : 0;
+  base.operatingDeductionRequested = profile.deductibleOperatingAnnual * index + grundsteuerDeduction + customDeductible;
+  base.operatingDeduction = Math.min(profile.deductibleOperatingAnnual * index, operatingCashCosts + base.propertyTax - grundsteuerDeduction)
+    + grundsteuerDeduction + customDeductible;
+  // Con il piano del mutuo gli interessi sono quelli effettivi dell'anno; altrimenti l'importo inserito.
+  base.interestDeduction = input.mortgageInterest ?? Math.min(profile.deductibleInterestAnnual, mortgageCash);
+  const afaBasis = profile.buildingTaxBasis + (input.afaBasisExtra ?? 0);
+  base.depreciation = Math.min(afaBasis * profile.afaRatePercent / 100,
+    Math.max(0, afaBasis - profile.alreadyDepreciated - (year - 1) * afaBasis * profile.afaRatePercent / 100));
   base.taxableRentalIncome = rentReceived + customIncome - base.operatingDeduction - base.interestDeduction - base.depreciation;
+  // Perdite riconosciute: compensazione con gli altri redditi dello stesso anno (§2 EStG) e riporto
+  // dell'eccedenza agli anni successivi (§10d EStG). Senza riconoscimento le perdite sono ignorate.
   const deltaIncome = profile.allowLossOffset ? base.taxableRentalIncome : Math.max(0, base.taxableRentalIncome);
+  let total = profile.otherTaxableIncome + deltaIncome, carry = profile.allowLossOffset ? input.lossCarryforward ?? 0 : 0;
+  if (total < 0) { carry -= total; total = 0; } else { const used = Math.min(carry, total); total -= used; carry -= used; }
+  base.lossCarryforward = carry; base.assessedIncome = total;
   const before = germanyIncomeTax2026(profile.otherTaxableIncome, profile.jointAssessment);
-  const after = germanyIncomeTax2026(profile.otherTaxableIncome + deltaIncome, profile.jointAssessment);
+  const after = germanyIncomeTax2026(total, profile.jointAssessment);
   base.incomeTax = after - before;
   if (profile.applySoli) base.solidarity = germanySoli2026(after, profile.jointAssessment) - germanySoli2026(before, profile.jointAssessment);
   base.churchTax = (after - before) * profile.churchTaxPercent / 100;
@@ -213,6 +317,7 @@ export const FISCAL_SOURCES = {
   italy: [
     { title: 'Agenzia delle Entrate · Guida agli affitti', url: 'https://www.agenziaentrate.gov.it/portale/documents/20143/3015794/GUIDA%2BAFFITTI%2B17%2BOTTOBRE%2BINTERNET%2B%281%29.pdf' },
     { title: 'Agenzia delle Entrate · Locazioni abitative', url: 'https://infoprecompilata.agenziaentrate.gov.it/portale/sl/web/guest/semplificata-mod-fabbricati' },
+    { title: 'Agenzia delle Entrate · Cedolare e rendita catastale', url: 'https://def.finanze.it/DocTribFrontend/getPrassiDetail.do?id=%7B228FB61E-DAC6-4403-A1AF-98840C064364%7D' },
     { title: 'MEF · TUIR art. 11 (2026)', url: 'https://def.finanze.it/DocTribFrontend/getArticoloDetailFromResultList.do?codiceOrdinamento=0000000000000110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000&id=%7BD5368F6F-A959-4AF5-A60F-8CB8BD99E176%7D&idAttoNormativo=%7B31D694E8-4398-4030-873B-FEAF5A6647F9%7D' },
     { title: 'Agenzia delle Entrate · Acquisto della casa', url: 'https://www1.agenziaentrate.gov.it/web_app_entrate/guida_acquisto_casa.html' },
     { title: 'Comune di Venezia · Base imponibile IMU', url: 'https://www.comune.venezia.it/it/node/28631' },

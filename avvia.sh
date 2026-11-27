@@ -4,12 +4,12 @@ set -eu
 cd -P "$(dirname "$0")"
 
 if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
-  echo "Servono Node.js 24 LTS e npm. Installali e riprova." >&2
+  echo "Servono Node.js 24 LTS o 26 LTS e npm. Installali e riprova." >&2
   exit 1
 fi
 
-if ! node -e "const v=process.versions.node.split('.').map(Number); process.exit(v[0]===24 && v[1]>=15 ? 0 : 1)"; then
-  echo "Serve Node.js 24 LTS, versione 24.15.0 o successiva." >&2
+if ! node -e "const v=process.versions.node.split('.').map(Number); process.exit((v[0]===24 && v[1]>=15) || v[0]===26 ? 0 : 1)"; then
+  echo "Serve Node.js 24 LTS (24.15.0 o successiva) oppure 26 LTS." >&2
   exit 1
 fi
 

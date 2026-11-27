@@ -8,17 +8,17 @@ pushd "%~dp0" || (
 
 where node >nul 2>&1
 if errorlevel 1 (
-  echo Node.js 24 LTS non trovato. Installalo e riprova.
+  echo Node.js 24 LTS o 26 LTS non trovato. Installalo e riprova.
   goto errore
 )
 where npm >nul 2>&1
 if errorlevel 1 (
-  echo npm non trovato. Installa Node.js 24 LTS con npm e riprova.
+  echo npm non trovato. Installa Node.js 24 LTS o 26 LTS con npm e riprova.
   goto errore
 )
-node -e "const v=process.versions.node.split('.').map(Number); process.exit(v[0]===24 && v[1]>=15 ? 0 : 1)"
+node -e "const v=process.versions.node.split('.').map(Number); process.exit((v[0]===24 && v[1]>=15) || v[0]===26 ? 0 : 1)"
 if errorlevel 1 (
-  echo Serve Node.js 24 LTS, versione 24.15.0 o successiva.
+  echo Serve Node.js 24 LTS, versione 24.15.0 o successiva, oppure 26 LTS.
   goto errore
 )
 

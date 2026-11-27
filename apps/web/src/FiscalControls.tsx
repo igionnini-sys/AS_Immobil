@@ -23,12 +23,22 @@ export function FiscalControls({ profile, language, onChange }: { profile: TaxPr
       </select></label>
       {profile.regime === 'cedolare10' && check('reducedRateEligible')}
       {profile.regime === 'custom' && numeric('customTaxPercent', 100)}
-      {profile.regime === 'ordinary' && <>{numeric('otherTaxableIncome', 1e12, 'otherIncomeHelp')}{numeric('localSurtaxPercent', 20)}{check('ordinaryConcordatoReduction')}
+      {numeric('otherTaxableIncome', 1e12, 'otherIncomeHelp')}
+      <label className="field"><span>{t('otherIncomeType')}</span><select name="tax.otherIncomeType" value={profile.otherIncomeType} onChange={e => update('otherIncomeType', e.target.value)}>
+        {(['employee', 'pension', 'self_employed', 'none'] as const).map(key => <option key={key} value={key}>{t(`incomeType_${key}`)}</option>)}
+      </select><small>{t('otherIncomeTypeHelp')}</small></label>
+      {numeric('localSurtaxPercent', 20)}
+      <label className="field"><span>{t('vacantSameMunicipality')}</span><select name="tax.vacantSameMunicipality" value={profile.vacantSameMunicipality} onChange={e => update('vacantSameMunicipality', e.target.value)}>
+        <option value="unknown">{t('vacancyUnknown')}</option><option value="yes">{t('vacancyYes')}</option><option value="no">{t('vacancyNo')}</option>
+      </select><small>{t('vacancyHelp')}</small></label>
+      {check('renegotiateRent')}
+      {profile.regime === 'ordinary' && check('ordinaryConcordatoReduction')}
+      {(profile.regime === 'ordinary' || profile.regime === 'custom') && <>
         <label className="field"><span>{t('leaseDutiesMode')}</span><select name="tax.leaseDutiesMode" value={profile.leaseDutiesMode} onChange={e => update('leaseDutiesMode', e.target.value)}>
           <option value="auto">{t('leaseDutiesAuto')}</option><option value="manual">{t('leaseDutiesManual')}</option>
         </select>{profile.leaseDutiesMode === 'auto' && <small>{t('leaseDutiesAutoHelp')}</small>}</label>
         {profile.leaseDutiesMode === 'manual' && numeric('annualLeaseDuties')}</>}
-      {numeric('cadastralRent')}{numeric('imuRatePermille', 30, 'imuHelp')}{check('imuConcordatoReduction')}
+      {numeric('cadastralRent')}{numeric('imuRatePermille', 30, 'imuHelp')}{numeric('imuVacantRatePermille', 30, 'imuVacantHelp')}{check('imuConcordatoReduction')}
       <label className="field"><span>{t('purchaseTaxMode')}</span><select name="tax.purchaseTaxMode" value={profile.purchaseTaxMode} onChange={e => update('purchaseTaxMode', e.target.value)}>
         <option value="manual">{t('manual')}</option><option value="second_home_private">{t('second_home_private')}</option>
       </select></label>
@@ -36,8 +46,8 @@ export function FiscalControls({ profile, language, onChange }: { profile: TaxPr
     </> : <>
       {numeric('otherTaxableIncome', 1e12, 'otherIncomeHelp')}{check('jointAssessment')}
       {numeric('deductibleOperatingAnnual', 1e12, 'deductionHelp')}{numeric('deductibleInterestAnnual', 1e12, 'interestHelp')}
-      {numeric('buildingTaxBasis', 1e12, 'buildingHelp')}{numeric('alreadyDepreciated')}{numeric('afaRatePercent', 100, 'afaHelp')}
-      {numeric('grundsteuerAnnual', 1e12, 'grundsteuerHelp')}{numeric('transferTaxPercent', 10, 'transferHelp')}
+      {numeric('buildingTaxBasis', 1e12, 'buildingHelp')}{check('afaIncludesAcquisitionCosts')}{numeric('alreadyDepreciated')}{numeric('afaRatePercent', 100, 'afaHelp')}
+      {numeric('grundsteuerAnnual', 1e12, 'grundsteuerHelp')}{check('autoDeductGrundsteuer')}{numeric('transferTaxPercent', 10, 'transferHelp')}
       <label className="field"><span>{t('churchTaxPercent')}</span><select name="tax.churchTaxPercent" value={profile.churchTaxPercent} onChange={e => update('churchTaxPercent', Number(e.target.value))}>
         {[0, 8, 9].map(rate => <option key={rate} value={rate}>{rate}%</option>)}
       </select></label>{check('applySoli')}{check('allowLossOffset')}

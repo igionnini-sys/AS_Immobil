@@ -12,6 +12,14 @@ function memory() {
   return { files, driver };
 }
 describe('Archivio locale versionato', () => {
+  it('conserva la preferenza della procedura guidata e rifiuta valori non booleani', () => {
+    const archive = emptyArchive();
+    expect(parseArchive(serializeArchive(archive)).preferences.startWizard).toBeUndefined();
+    archive.preferences.startWizard = false;
+    expect(parseArchive(serializeArchive(archive)).preferences.startWizard).toBe(false);
+    const text = JSON.stringify({ ...archive, preferences: { ...archive.preferences, startWizard: 'no' } });
+    expect(() => parseArchive(text)).toThrow('INVALID_PREFERENCES');
+  });
   it('salva, accoda gli aggiornamenti e recupera la bozza dopo riapertura', async () => {
     const { driver } = memory(); const repo = new ScenarioRepository(driver);
     const archive = emptyArchive(); const scenario = createScenario('Prova', DEFAULT_PARAMS);

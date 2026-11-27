@@ -1,6 +1,7 @@
 import it from './it.json';
 import en from './en.json';
 import { fiscalTranslations } from './fiscal';
+import { wizardTranslations } from './wizard';
 export type Language = 'it' | 'en';
 const labels = {
   it: {
@@ -31,9 +32,14 @@ const labels = {
     annualYield: 'Rendimento netto', management: 'Gestione', notAvailable: 'Non disponibile',
     startTitle: 'Ogni investimento parte da un’ipotesi.', startBody: 'Inserisci i dati dell’immobile e calcola la proiezione. Puoi salvare più scenari e confrontarne i risultati.',
     years: 'anni', model: 'Modello', olderModel: 'Scenario di un modello precedente: i risultati vengono ricalcolati con il modello attuale.',
-    roe_estimated: 'Il ROE con mutuo è una stima sul capitale totale investito: il modello non dispone di capitale finanziato e debito residuo.',
+    mortgage_debt_missing: 'Hai indicato una rata ma non il debito residuo: il prezzo intero è contato come capitale investito e le rate rimborsano di nuovo lo stesso capitale. Profitto, TIR, CAGR e ROE risultano sottostimati: inserisci il debito residuo del mutuo.',
+    mortgage_debt: 'Debito Residuo Mutuo (€)', mortgage_debt_help: 'Capitale ancora da rimborsare all’inizio della simulazione, dal piano di ammortamento o dal contratto. Con zero il prezzo intero è considerato capitale investito.',
+    mortgage_debt_invalid: 'Debito non coerente: con questa rata e questi anni non viene rimborsato, oppure non è inferiore al costo iniziale.',
+    equity: 'Capitale proprio investito', initial_debt: 'Debito iniziale', implied_rate: 'Tasso annuo implicito (TAN)', final_debt: 'Debito residuo alla vendita',
     mortgage_zero_years: 'Hai indicato una rata ma zero anni residui: non vengono sottratte rate.',
     renovation_only: 'Con sola ristrutturazione e acquisto a zero, il capitale iniziale considera solo ristrutturazione e commissione.',
+    renovation_only_no_purchase_tax: 'Con sola ristrutturazione e acquisto a zero l’immobile risulta già posseduto: il capitale iniziale considera solo ristrutturazione, commissione e altri costi iniziali, senza imposte di acquisto.',
+    irr_positive_unique: 'I flussi cambiano segno più volte, ma quelli cumulati una sola: il TIR mostrato è l’unica soluzione positiva (criterio di Norström).',
     irr_ambiguous: 'I flussi cambiano segno più volte: il TIR può avere più soluzioni e non viene mostrato.',
     annualization_unavailable: 'Il capitale finale è negativo: il tasso annualizzato non è definito.',
     irrUnavailable: 'TIR non disponibile: i flussi non hanno una soluzione verificata nell’intervallo previsto.',
@@ -70,9 +76,14 @@ const labels = {
     annualYield: 'Net yield', management: 'Management', notAvailable: 'Not available',
     startTitle: 'Every investment starts with an assumption.', startBody: 'Enter the property details and calculate a projection. Save several scenarios and explore their results.',
     years: 'years', model: 'Model', olderModel: 'Scenario from an earlier model: results are recalculated using the current model.',
-    roe_estimated: 'ROE with a mortgage is estimated using total invested capital: financed principal and outstanding debt are not available.',
+    mortgage_debt_missing: 'You entered a payment but no outstanding debt: the full price counts as invested capital and the payments repay the same capital again. Profit, IRR, CAGR and ROE are understated: enter the outstanding mortgage debt.',
+    mortgage_debt: 'Outstanding Mortgage Debt (€)', mortgage_debt_help: 'Principal still to repay at the start of the simulation, from the amortisation schedule or the contract. With zero the full price counts as invested capital.',
+    mortgage_debt_invalid: 'Inconsistent debt: this payment and term do not repay it, or it is not lower than the initial cost.',
+    equity: 'Own capital invested', initial_debt: 'Initial debt', implied_rate: 'Implied annual rate', final_debt: 'Debt outstanding at sale',
     mortgage_zero_years: 'You entered a payment with zero remaining years: no mortgage payments are deducted.',
     renovation_only: 'With renovation costs and zero purchase costs, initial capital only includes renovation and the initial commission.',
+    renovation_only_no_purchase_tax: 'With renovation costs and zero purchase costs the property is treated as already owned: initial capital includes only renovation, commission and other initial costs, without purchase taxes.',
+    irr_positive_unique: 'Cash flows change sign more than once, but cumulative flows only once: the IRR shown is the only positive solution (Norström criterion).',
     irr_ambiguous: 'Cash flows change sign more than once: IRR may have multiple solutions and is not displayed.',
     annualization_unavailable: 'Final capital is negative: the annualized rate is undefined.',
     irrUnavailable: 'IRR unavailable: no verified solution for these cash flows in the supported range.',
@@ -82,7 +93,8 @@ const labels = {
     importNote: 'Import adds copies of scenarios without replacing existing ones.',
   },
 };
-export const translations = { it: { ...it, ...labels.it, ...fiscalTranslations.it }, en: { ...en, ...labels.en, ...fiscalTranslations.en } };
+export const translations = { it: { ...it, ...labels.it, ...fiscalTranslations.it, ...wizardTranslations.it },
+  en: { ...en, ...labels.en, ...fiscalTranslations.en, ...wizardTranslations.en } };
 export function translator(lang: Language) {
   const dictionary: Record<string, string> = translations[lang];
   return (key: string): string => dictionary[key] ?? key;

@@ -7,7 +7,8 @@ export interface Scenario {
 }
 export interface Archive {
   schemaVersion: 2;
-  preferences: { language: Language; activeScenarioId: string | null; section?: Section };
+  /** startWizard assente equivale a true: la procedura guidata compare all'avvio. */
+  preferences: { language: Language; activeScenarioId: string | null; section?: Section; startWizard?: boolean };
   draft: { inputs: InvestmentParams; updatedAt: string } | null;
   sectionDrafts: Record<Section, Archive['draft']>;
   scenarios: Scenario[];
@@ -50,6 +51,7 @@ export function parseArchive(text: string): Archive {
   if (data.schemaVersion !== 1 && data.schemaVersion !== 2) throw new Error('UNSUPPORTED_SCHEMA');
   const prefs = record(data.preferences);
   if (prefs.language !== 'it' && prefs.language !== 'en') throw new Error('INVALID_LANGUAGE');
+  if (prefs.startWizard !== undefined && typeof prefs.startWizard !== 'boolean') throw new Error('INVALID_PREFERENCES');
   if (!Array.isArray(data.scenarios) || data.scenarios.length > MAX_SCENARIOS) throw new Error('INVALID_SCENARIOS');
   const ids = new Set<string>();
   const scenarios = data.scenarios.map(item => {
@@ -82,7 +84,9 @@ export function parseArchive(text: string): Archive {
   }
   const active = prefs.activeScenarioId === null ? null : identifier(prefs.activeScenarioId);
   if (active !== null && !ids.has(active)) throw new Error('INVALID_ACTIVE_SCENARIO');
-  return { schemaVersion: 2, preferences: { language: prefs.language, activeScenarioId: active, section: section as Section }, draft, sectionDrafts, scenarios };
+  const preferences: Archive['preferences'] = { language: prefs.language, activeScenarioId: active, section: section as Section };
+  if (typeof prefs.startWizard === 'boolean') preferences.startWizard = prefs.startWizard;
+  return { schemaVersion: 2, preferences, draft, sectionDrafts, scenarios };
 }
 export function serializeArchive(archive: Archive): string {
   const text = JSON.stringify(archive, null, 2);

@@ -2,7 +2,11 @@
 
 Calcolatore di investimenti immobiliari offline, convertito da Python/Streamlit a Node.js e TypeScript. Interfaccia React condivisa, Electron per Windows/Linux e Capacitor per Android.
 
-Sono implementati i 19 parametri originali, simulazione annuale, rivalutazione, inflazione, costi, mutuo, commissioni, CAGR, TIR, ROI e ROE, italiano/inglese, salvataggio automatico della bozza, scenari con nome, backup e import/export JSON. La versione desktop è `0.2.1`, con modello `3.1.0`; l'ultima build Android è `0.2.0`.
+Sono implementati i 19 parametri originali, simulazione annuale, rivalutazione, inflazione, costi, mutuo, commissioni, CAGR, TIR, ROI e ROE, italiano/inglese, salvataggio automatico della bozza, scenari con nome, backup e import/export JSON. La versione desktop è `0.2.1`, con modello `3.3.0`; l'ultima build Android è `0.2.0`.
+
+## Procedura guidata
+
+All'avvio una procedura guidata chiede, un passo alla volta, tipo di simulazione, immobile, affitto, costi, mutuo, durata e, per Italia e Germania, il profilo fiscale. Ogni passo controlla i dati prima di proseguire e il riepilogo permette di correggerli. Al termine si apre l'interfaccia completa con i risultati già calcolati e, se richiesto, lo scenario salvato. Il pulsante «Modalità esperto» porta subito all'interfaccia completa: conserva i dati inseriti nella procedura, oppure la bozza esistente se non è stato modificato nulla. Dall'interfaccia completa si avvia una nuova procedura o si disattiva quella all'avvio; la preferenza resta nell'archivio.
 
 ## Italia e Germania
 
@@ -16,7 +20,7 @@ Le aliquote generiche su canoni/valore immobiliare vengono sostituite dal profil
 
 ## Avvio
 
-Prerequisito: Node.js 24 LTS (verificato con 24.15.0) e npm. I pacchetti installabili finali non richiedono Node.js o Python sul dispositivo dell'utente.
+Prerequisito: Node.js 24 LTS (>=24.15.0) oppure 26 LTS e npm. I pacchetti installabili finali non richiedono Node.js o Python sul dispositivo dell'utente.
 
 Per avviare l'app desktop dalla cartella del progetto:
 
